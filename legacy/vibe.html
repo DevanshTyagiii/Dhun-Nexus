@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Feed | DhunNexus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { background-color: #050505; font-family: 'Inter', sans-serif; color: white; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(255, 153, 51, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(255, 153, 51, 0.1);
+        }
+        .saffron-glow { box-shadow: 0 0 30px rgba(255, 153, 51, 0.4); }
+        .neon-glow { box-shadow: 0 0 20px rgba(0, 242, 255, 0.3); }
+        .vibe-card { scroll-snap-align: start; }
+        .add-stem-btn {
+            background: linear-gradient(135deg, #FF9933 0%, #ff7e00 100%);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255,153,51,0.5);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF9933] to-[#00F2FF] flex items-center justify-center">
+                        <i data-lucide="music-2" class="w-6 h-6 text-black"></i>
+                    </div>
+                    <span class="font-['Archivo_Black'] text-2xl tracking-tighter text-white">
+                        Dhun<span class="text-[#FF9933]">Nexus</span>
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="vibe.html" class="px-4 py-2 rounded-full text-sm font-medium text-[#FF9933] bg-white/10 flex items-center gap-2 border border-[#FF9933]/30">
+                        <i data-lucide="flame" class="w-4 h-4"></i>
+                        Vibe Feed
+                    </a>
+                    <a href="band.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-[#00F2FF] hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Band Room
+                    </a>
+                    <a href="bounty.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-[#FF9933] hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                        Bounty Board
+                    </a>
+                    <a href="profile.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-[#00F2FF] hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        Profile
+                    </a>
+                </div>
+                
+                <button class="md:hidden text-white" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="mobile-menu" class="hidden md:hidden glass-panel border-t border-white/10">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="vibe.html" class="block px-3 py-2 rounded-md text-base font-medium text-[#FF9933]">Vibe Feed</a>
+                <a href="band.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white">Band Room</a>
+                <a href="bounty.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white">Bounty Board</a>
+                <a href="profile.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-24 pb-32 px-4 max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="font-['Archivo_Black'] text-4xl text-white mb-2">Vibe Feed</h1>
+                <p class="text-gray-400">Discover stems • Swipe to layer • Build the future</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+                <button onclick="filterByGenre('all')" class="genre-filter px-4 py-2 rounded-full bg-white/10 text-white text-sm border border-white/20 hover:border-[#FF9933] transition-all active" data-genre="all">
+                    All
+                </button>
+                <button onclick="filterByGenre('sufi-trap')" class="genre-filter px-4 py-2 rounded-full glass-card text-gray-300 text-sm hover:text-[#00F2FF] transition-all" data-genre="sufi-trap">
+                    Sufi-Trap
+                </button>
+                <button onclick="filterByGenre('drill')" class="genre-filter px-4 py-2 rounded-full glass-card text-gray-300 text-sm hover:text-[#00F2FF] transition-all" data-genre="drill">
+                    Drill
+                </button>
+                <button onclick="filterByGenre('phonk')" class="genre-filter px-4 py-2 rounded-full glass-card text-gray-300 text-sm hover:text-[#00F2FF] transition-all" data-genre="phonk">
+                    Phonk
+                </button>
+            </div>
+        </div>
+
+        <!-- Stems Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="stems-container">
+            <!-- Loading State -->
+            <div class="col-span-full flex items-center justify-center py-20">
+                <div class="flex items-center gap-2 text-gray-400">
+                    <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+                    <span>Loading stems...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div class="mt-8 text-center">
+            <button onclick="loadMoreStems()" class="px-8 py-3 rounded-full glass-card text-white hover:border-[#FF9933] transition-all">
+                Load More Stems
+            </button>
+        </div>
+    </main>
+
+    <!-- Floating Add Button -->
+    <div class="fixed bottom-8 right-8 z-40">
+        <a href="upload.html" class="add-stem-btn w-16 h-16 rounded-full saffron-glow flex items-center justify-center text-white shadow-2xl transform transition-transform hover:scale-110 active:scale-95 block">
+            <i data-lucide="plus" class="w-8 h-8"></i>
+        </a>
+    </div>
+
+    <!-- Layer Modal -->
+    <div id="layer-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeLayerModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="glass-card rounded-3xl p-6 max-w-lg w-full relative" id="layer-modal-content">
+                <button onclick="closeLayerModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                
+                <h2 class="font-['Archivo_Black'] text-2xl text-white mb-2">Layer This Stem</h2>
+                <p class="text-gray-400 text-sm mb-6" id="layer-stem-title">Select how you want to contribute</p>
+                
+                <div class="space-y-4">
+                    <button onclick="startRecording('vocals')" class="w-full p-4 rounded-xl glass-card hover:bg-[#00F2FF]/10 hover:border-[#00F2FF]/50 transition-all flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#00F2FF]/20 flex items-center justify-center">
+                            <i data-lucide="mic" class="w-6 h-6 text-[#00F2FF]"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-white font-semibold">Record Vocals</h4>
+                            <p class="text-xs text-gray-400">Add your voice over this beat</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 ml-auto"></i>
+                    </button>
+                    
+                    <button onclick="startRecording('instrument')" class="w-full p-4 rounded-xl glass-card hover:bg-[#FF9933]/10 hover:border-[#FF9933]/50 transition-all flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#FF9933]/20 flex items-center justify-center">
+                            <i data-lucide="guitar" class="w-6 h-6 text-[#FF9933]"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-white font-semibold">Add Instrument</h4>
+                            <p class="text-xs text-gray-400">Guitar, flute, tabla, synth...</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 ml-auto"></i>
+                    </button>
+                    
+                    <button onclick="uploadLayer()" class="w-full p-4 rounded-xl glass-card hover:bg-purple-500/10 hover:border-purple-500/50 transition-all flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <i data-lucide="upload" class="w-6 h-6 text-purple-400"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-white font-semibold">Upload File</h4>
+                            <p class="text-xs text-gray-400">Already recorded? Upload .wav or .mp3</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 ml-auto"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Bar -->
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 transform translate-y-full transition-transform duration-300 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+            <img id="player-cover" src="" class="w-12 h-12 rounded-lg object-cover bg-gray-800">
+            <div class="flex-1 min-w-0">
+                <h4 id="player-title" class="text-white font-medium text-sm truncate">Select a track</h4>
+                <p id="player-artist" class="text-xs text-gray-400 truncate">Artist</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="player.togglePlay()" class="w-10 h-10 rounded-full bg-[#FF9933] flex items-center justify-center text-black">
+                    <i data-lucide="play" class="w-5 h-5 fill-black" id="play-icon"></i>
+                </button>
+            </div>
+            <button onclick="document.getElementById('player-bar').classList.add('translate-y-full')" class="text-gray-400">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        let stems = [];
+        let currentGenre = 'all';
+        let player = {
+            currentSound: null,
+            isPlaying: false,
+            togglePlay() {
+                if (this.currentSound) {
+                    if (this.isPlaying) {
+                        this.currentSound.pause();
+                    } else {
+                        this.currentSound.play();
+                    }
+                }
+            }
+        };
+        
+        // Fetch stems from API
+        async function fetchStems(genre = 'all', page = 1) {
+            // Simulating API call - replace with actual endpoint
+            // const response = await fetch(`/api/stems?genre=${genre}&page=${page}`);
+            // const data = await response.json();
+            
+            // Mock data
+            const mockStems = [
+                {
+                    id: 1,
+                    title: "Midnight Dhaba Vibes",
+                    artist: "@trapproducer_mumbai",
+                    cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=640&h=360&fit=crop",
+                    bpm: 140,
+                    key: "C-Minor",
+                    genre: "Sufi-Trap",
+                    mood: "Dark",
+                    likes: 2400,
+                    layers: 12,
+                    isLive: true,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                },
+                {
+                    id: 2,
+                    title: "Bollywood Phonk Remix",
+                    artist: "@desibeats_delhi",
+                    cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=640&h=360&fit=crop",
+                    bpm: 95,
+                    key: "F-Major",
+                    genre: "Phonk",
+                    mood: "Energetic",
+                    likes: 1800,
+                    layers: 8,
+                    isBounty: true,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+                },
+                {
+                    id: 3,
+                    title: "Raga Digital Fusion",
+                    artist: "@classicaltech_chennai",
+                    cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=640&h=360&fit=crop",
+                    bpm: 128,
+                    key: "G-Minor",
+                    genre: "Fusion",
+                    mood: "Spiritual",
+                    likes: 3200,
+                    layers: 24,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+                },
+                {
+                    id: 4,
+                    title: "Delhi Drill Anthem",
+                    artist: "@street_producer",
+                    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=640&h=360&fit=crop",
+                    bpm: 140,
+                    key: "A-Minor",
+                    genre: "Drill",
+                    mood: "Aggressive",
+                    likes: 1500,
+                    layers: 6,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+                },
+                {
+                    id: 5,
+                    title: "Monsoon Lo-Fi",
+                    artist: "@lofi_kolkata",
+                    cover: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=640&h=360&fit=crop",
+                    bpm: 85,
+                    key: "D-Major",
+                    genre: "Lo-Fi",
+                    mood: "Chill",
+                    likes: 4200,
+                    layers: 18,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+                },
+                {
+                    id: 6,
+                    title: "Desi House Groove",
+                    artist: "@house_dj_bangalore",
+                    cover: "https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=640&h=360&fit=crop",
+                    bpm: 124,
+                    key: "E-Minor",
+                    genre: "House",
+                    mood: "Euphoric",
+                    likes: 2100,
+                    layers: 9,
+                    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+                }
+            ];
+            
+            return mockStems;
+        }
+        
+        async function renderStems() {
+            const container = document.getElementById('stems-container');
+            stems = await fetchStems(currentGenre);
+            
+            container.innerHTML = stems.map(stem => `
+                <div class="glass-card rounded-2xl overflow-hidden vibe-card group" data-genre="${stem.genre.toLowerCase()}">
+                    <div class="relative h-64 cursor-pointer" onclick="playStem(${stem.id})">
+                        <img src="${stem.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" alt="${stem.title}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                        
+                        ${stem.isLive ? `
+                            <div class="absolute top-4 left-4 flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/50">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                <span class="text-xs font-bold text-red-400">LIVE LAYERING</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${stem.isBounty ? `
+                            <div class="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#FF9933]/20 text-[#FF9933] text-xs font-bold border border-[#FF9933]/30">
+                                FEATURED BOUNTY
+                            </div>
+                        ` : ''}
+                        
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm">
+                            <button class="w-16 h-16 rounded-full bg-[#FF9933] flex items-center justify-center saffron-glow transform scale-90 group-hover:scale-100 transition-transform">
+                                <i data-lucide="play" class="w-8 h-8 text-black fill-black ml-1"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-1 rounded bg-[#00F2FF]/20 text-[#00F2FF] text-xs font-bold border border-[#00F2FF]/30">${stem.bpm} BPM</span>
+                                <span class="px-2 py-1 rounded bg-white/10 text-white text-xs border border-white/20">${stem.key}</span>
+                                <span class="px-2 py-1 rounded bg-white/5 text-gray-300 text-xs border border-white/10">${stem.mood}</span>
+                            </div>
+                            <h3 class="font-['Archivo_Black'] text-xl text-white">${stem.title}</h3>
+                            <p class="text-sm text-gray-400">by ${stem.artist}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-black/20">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-4">
+                                <button onclick="toggleLike(${stem.id}, this)" class="flex items-center gap-1 text-gray-400 hover:text-red-500 transition-colors group/like">
+                                    <i data-lucide="heart" class="w-5 h-5 group-hover/like:fill-red-500"></i>
+                                    <span class="text-sm">${(stem.likes / 1000).toFixed(1)}k</span>
+                                </button>
+                                <a href="stem-tree.html?id=${stem.id}" class="flex items-center gap-1 text-gray-400 hover:text-[#00F2FF] transition-colors">
+                                    <i data-lucide="git-branch" class="w-5 h-5"></i>
+                                    <span class="text-sm">${stem.layers} Layers</span>
+                                </a>
+                            </div>
+                            <span class="text-xs text-[#FF9933] border border-[#FF9933]/30 px-2 py-1 rounded-full">${stem.genre}</span>
+                        </div>
+                        
+                        <button onclick="openLayerModal(${stem.id})" class="w-full py-3 rounded-xl bg-[#00F2FF]/20 text-[#00F2FF] font-semibold border border-[#00F2FF]/50 hover:bg-[#00F2FF]/30 transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="mic" class="w-4 h-4"></i>
+                            Layer This
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+        
+        function filterByGenre(genre) {
+            currentGenre = genre;
+            
+            // Update button styles
+            document.querySelectorAll('.genre-filter').forEach(btn => {
+                if (btn.dataset.genre === genre) {
+                    btn.classList.add('bg-white/10', 'text-white', 'border-white/20');
+                    btn.classList.remove('text-gray-300');
+                } else {
+                    btn.classList.remove('bg-white/10', 'text-white', 'border-white/20');
+                    btn.classList.add('text-gray-300');
+                }
+            });
+            
+            renderStems();
+        }
+        
+        function playStem(id) {
+            const stem = stems.find(s => s.id === id);
+            if (!stem) return;
+            
+            // Show player bar
+            document.getElementById('player-bar').classList.remove('translate-y-full');
+            document.getElementById('player-title').textContent = stem.title;
+            document.getElementById('player-artist').textContent = stem.artist;
+            document.getElementById('player-cover').src = stem.cover;
+            
+            // Play with Howler
+            if (player.currentSound) {
+                player.currentSound.stop();
+                player.currentSound.unload();
+            }
+            
+            player.currentSound = new Howl({
+                src: [stem.audioUrl],
+                html5: true,
+                volume: 0.8,
+                onplay: () => {
+                    player.isPlaying = true;
+                    document.getElementById('play-icon').setAttribute('data-lucide', 'pause');
+                    lucide.createIcons();
+                },
+                onpause: () => {
+                    player.isPlaying = false;
+                    document.getElementById('play-icon').setAttribute('data-lucide', 'play');
+                    lucide.createIcons();
+                },
+                onend: () => {
+                    player.isPlaying = false;
+                    document.getElementById('play-icon').setAttribute('data-lucide', 'play');
+                    lucide.createIcons();
+                }
+            });
+            
+            player.currentSound.play();
+        }
+        
+        function toggleLike(id, btn) {
+            const icon = btn.querySelector('i');
+            const count = btn.querySelector('span');
+            
+            if (btn.classList.contains('text-red-500')) {
+                btn.classList.remove('text-red-500');
+                icon.classList.remove('fill-red-500');
+                // API call: POST /api/stems/${id}/unlike
+            } else {
+                btn.classList.add('text-red-500');
+                icon.classList.add('fill-red-500');
+                // API call: POST /api/stems/${id}/like
+                count.textContent = (parseFloat(count.textContent) + 0.1).toFixed(1) + 'k';
+            }
+        }
+        
+        let currentLayerStem = null;
+        
+        function openLayerModal(stemId) {
+            currentLayerStem = stemId;
+            const stem = stems.find(s => s.id === stemId);
+            document.getElementById('layer-stem-title').textContent = `Adding layer to: ${stem?.title || 'Unknown'}`;
+            document.getElementById('layer-modal').classList.remove('hidden');
+        }
+        
+        function closeLayerModal() {
+            document.getElementById('layer-modal').classList.add('hidden');
+        }
+        
+        function startRecording(type) {
+            window.location.href = `record.html?stem=${currentLayerStem}&type=${type}`;
+        }
+        
+        function uploadLayer() {
+            window.location.href = `upload.html?stem=${currentLayerStem}&mode=layer`;
+        }
+        
+        function loadMoreStems() {
+            // Pagination logic
+            alert('Loading more stems...');
+        }
+        
+        // Initialize
+        renderStems();
+    </script>
+</body>
+</html>
