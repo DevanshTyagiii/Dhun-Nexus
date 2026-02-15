@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DhunNexus | Cyber-Desi Music Collaboration</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Wavesurfer.js -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    
+    <!-- Socket.io for real-time features -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- Howler.js for audio playback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        deepSpace: '#050505',
+                        electricSaffron: '#FF9933',
+                        neonTeal: '#00F2FF',
+                        glassBorder: 'rgba(255, 255, 255, 0.1)',
+                        glassBg: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        archivo: ['Archivo Black', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #050505;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(255, 153, 51, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(255, 153, 51, 0.1);
+        }
+        
+        .neon-glow { box-shadow: 0 0 20px rgba(0, 242, 255, 0.3); }
+        .saffron-glow { box-shadow: 0 0 30px rgba(255, 153, 51, 0.4); }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255,153,51,0.5);
+            border-radius: 3px;
+        }
+        
+        .add-stem-btn {
+            background: linear-gradient(135deg, #FF9933 0%, #ff7e00 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .add-stem-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        
+        .add-stem-btn:hover::before {
+            animation: shine 0.5s ease-in-out;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); opacity: 0; }
+        }
+        
+        .playing-indicator {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .frequency-bar {
+            width: 3px;
+            background: linear-gradient(to top, #FF9933, #00F2FF);
+            border-radius: 2px;
+            animation: wave 1.2s ease-in-out infinite;
+        }
+        
+        @keyframes wave {
+            0%, 100% { height: 20%; }
+            50% { height: 100%; }
+        }
+        
+        .loading-skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+    <!-- Auth Check -->
+    <script>
+        // Check if user is logged in
+        const currentUser = JSON.parse(localStorage.getItem('dhunnexus_user') || '{}');
+        if (!currentUser.id) {
+            // Redirect to login if not authenticated
+            // window.location.href = 'login.html';
+        }
+    </script>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-electricSaffron to-neonTeal flex items-center justify-center">
+                        <i data-lucide="music-2" class="w-6 h-6 text-black"></i>
+                    </div>
+                    <span class="font-archivo text-2xl tracking-tighter text-white">
+                        Dhun<span class="text-electricSaffron">Nexus</span>
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="vibe.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-electricSaffron hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="flame" class="w-4 h-4"></i>
+                        Vibe Feed
+                    </a>
+                    <a href="band.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-neonTeal hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Band Room
+                    </a>
+                    <a href="bounty.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-electricSaffron hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                        Bounty Board
+                    </a>
+                    <a href="profile.html" class="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-neonTeal hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        Profile
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full glass-card cursor-pointer hover:border-electricSaffron/50 transition-colors" onclick="showTokenHistory()">
+                        <i data-lucide="zap" class="w-4 h-4 text-electricSaffron"></i>
+                        <span class="text-sm font-bold text-electricSaffron" id="token-count">2,450</span>
+                        <span class="text-xs text-gray-400">Jam Tokens</span>
+                    </div>
+                    
+                    <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    
+                    <a href="profile.html" class="w-10 h-10 rounded-full overflow-hidden border-2 border-neonTeal cursor-pointer hover:scale-110 transition-transform">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="User" class="w-full h-full object-cover" id="nav-avatar">
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden glass-panel border-t border-white/10">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="vibe.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/10">
+                    Vibe Feed
+                </a>
+                <a href="band.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/10">
+                    Band Room
+                </a>
+                <a href="bounty.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/10">
+                    Bounty Board
+                </a>
+                <a href="profile.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/10">
+                    Profile
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content - Landing/Dashboard -->
+    <main class="pt-24 pb-24 px-4 max-w-7xl mx-auto">
+        <!-- Welcome Section -->
+        <div class="glass-card rounded-3xl p-8 mb-8 relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-electricSaffron/10 to-neonTeal/10"></div>
+            <div class="absolute top-0 right-0 w-96 h-96 bg-electricSaffron/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            
+            <div class="relative z-10">
+                <h1 class="font-archivo text-4xl md:text-5xl text-white mb-4">
+                    Welcome back, <span class="text-electricSaffron" id="username">Producer</span>
+                </h1>
+                <p class="text-gray-400 text-lg mb-6 max-w-2xl">
+                    The Indian indie scene is buzzing. 47 new stems dropped today, 12 bounties waiting for your talent.
+                </p>
+                
+                <div class="flex flex-wrap gap-4">
+                    <a href="vibe.html" class="px-8 py-4 rounded-full bg-electricSaffron text-black font-bold hover:scale-105 transition-transform flex items-center gap-2">
+                        <i data-lucide="compass" class="w-5 h-5"></i>
+                        Explore Vibe Feed
+                    </a>
+                    <a href="band.html" class="px-8 py-4 rounded-full glass-card text-white font-bold hover:bg-white/10 transition-all flex items-center gap-2">
+                        <i data-lucide="radio" class="w-5 h-5 text-neonTeal"></i>
+                        Join Live Jam
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-card rounded-2xl p-6 text-center hover:border-neonTeal/50 transition-colors cursor-pointer" onclick="location.href='vibe.html'">
+                <div class="w-12 h-12 rounded-full bg-neonTeal/20 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="music" class="w-6 h-6 text-neonTeal"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white" id="stat-stems">156</h3>
+                <p class="text-xs text-gray-400">Your Stems</p>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6 text-center hover:border-electricSaffron/50 transition-colors cursor-pointer" onclick="location.href='band.html'">
+                <div class="w-12 h-12 rounded-full bg-electricSaffron/20 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="users" class="w-6 h-6 text-electricSaffron"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white" id="stat-collabs">23</h3>
+                <p class="text-xs text-gray-400">Active Collabs</p>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6 text-center hover:border-purple-500/50 transition-colors cursor-pointer" onclick="location.href='bounty.html'">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="trophy" class="w-6 h-6 text-purple-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white" id="stat-bounties">₹45K</h3>
+                <p class="text-xs text-gray-400">Bounties Won</p>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6 text-center hover:border-green-500/50 transition-colors cursor-pointer">
+                <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="trending-up" class="w-6 h-6 text-green-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white">#42</h3>
+                <p class="text-xs text-gray-400">National Rank</p>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Recommendations -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Recent Activity -->
+            <div class="lg:col-span-2 glass-card rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="font-archivo text-xl text-white">Recent Activity</h2>
+                    <button class="text-sm text-neonTeal hover:underline">View All</button>
+                </div>
+                
+                <div class="space-y-4" id="activity-feed">
+                    <div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-neonTeal/20 flex items-center justify-center">
+                            <i data-lucide="git-merge" class="w-5 h-5 text-neonTeal"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">Your stem was layered!</p>
+                            <p class="text-sm text-gray-400">@singer_diva added vocals to "Midnight Dhaba"</p>
+                        </div>
+                        <span class="text-xs text-gray-500">2m ago</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-electricSaffron/20 flex items-center justify-center">
+                            <i data-lucide="coins" class="w-5 h-5 text-electricSaffron"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">Bounty reward received</p>
+                            <p class="text-sm text-gray-400">₹2,500 for "Tabla Layer" project</p>
+                        </div>
+                        <span class="text-xs text-gray-500">1h ago</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <i data-lucide="heart" class="w-5 h-5 text-purple-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">New follower</p>
+                            <p class="text-sm text-gray-400">@hiphop_guru started following you</p>
+                        </div>
+                        <span class="text-xs text-gray-500">3h ago</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gully Matcher Widget -->
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-archivo text-lg text-white">Gully Matcher</h2>
+                    <span class="text-xs bg-neonTeal/20 text-neonTeal px-2 py-1 rounded-full border border-neonTeal/30">AI Powered</span>
+                </div>
+                
+                <div class="relative h-48 rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-purple-900 to-blue-900 group cursor-pointer" onclick="location.href='matcher.html'">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex items-end gap-1 h-16">
+                            <div class="frequency-bar w-1" style="animation-delay: 0s"></div>
+                            <div class="frequency-bar w-1" style="animation-delay: 0.1s"></div>
+                            <div class="frequency-bar w-1" style="animation-delay: 0.2s"></div>
+                            <div class="frequency-bar w-1" style="animation-delay: 0.3s"></div>
+                            <div class="frequency-bar w-1" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                        <p class="text-white font-semibold">Find your sonic soulmate</p>
+                        <p class="text-xs text-gray-400">95% BPM match nearby</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="location.href='matcher.html'" class="flex-1 py-3 rounded-lg bg-electricSaffron/20 text-electricSaffron text-sm font-semibold border border-electricSaffron/50 hover:bg-electricSaffron/30 transition-all">
+                        Start Matching
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trending Now -->
+        <div class="mt-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="font-archivo text-2xl text-white">Trending Now</h2>
+                <a href="vibe.html" class="text-sm text-neonTeal hover:underline">Explore All</a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="trending-stems">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Add Button -->
+    <div class="fixed bottom-8 right-8 z-40 group">
+        <div class="tooltip absolute bottom-full right-0 mb-2 w-48 p-2 bg-deepSpace border border-electricSaffron rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Upload Stem, Record Layer, or Post Bounty
+        </div>
+        <button onclick="openAddModal()" class="add-stem-btn w-16 h-16 rounded-full saffron-glow flex items-center justify-center text-white shadow-2xl transform transition-transform hover:scale-110 active:scale-95">
+            <i data-lucide="plus" class="w-8 h-8"></i>
+        </button>
+    </div>
+
+    <!-- Add Modal -->
+    <div id="add-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeAddModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="glass-card rounded-3xl p-8 max-w-2xl w-full relative transform scale-95 opacity-0 transition-all duration-300" id="add-modal-content">
+                <button onclick="closeAddModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                
+                <h2 class="font-archivo text-2xl text-white mb-6 text-center">Add to DhunNexus</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button onclick="location.href='upload.html?type=stem'" class="p-6 rounded-2xl glass-card hover:bg-electricSaffron/10 hover:border-electricSaffron/50 transition-all flex flex-col items-center gap-3 group">
+                        <div class="w-16 h-16 rounded-full bg-electricSaffron/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="music" class="w-8 h-8 text-electricSaffron"></i>
+                        </div>
+                        <span class="text-sm font-medium text-white">Upload Stem</span>
+                        <span class="text-xs text-gray-500 text-center">Beat, vocal, or loop</span>
+                    </button>
+                    
+                    <button onclick="location.href='record.html'" class="p-6 rounded-2xl glass-card hover:bg-neonTeal/10 hover:border-neonTeal/50 transition-all flex flex-col items-center gap-3 group">
+                        <div class="w-16 h-16 rounded-full bg-neonTeal/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="mic" class="w-8 h-8 text-neonTeal"></i>
+                        </div>
+                        <span class="text-sm font-medium text-white">Record Layer</span>
+                        <span class="text-xs text-gray-500 text-center">Add to existing stem</span>
+                    </button>
+                    
+                    <button onclick="location.href='bounty.html?action=create'" class="p-6 rounded-2xl glass-card hover:bg-purple-500/10 hover:border-purple-500/50 transition-all flex flex-col items-center gap-3 group">
+                        <div class="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="trophy" class="w-8 h-8 text-purple-400"></i>
+                        </div>
+                        <span class="text-sm font-medium text-white">Post Bounty</span>
+                        <span class="text-xs text-gray-500 text-center">Hire collaborators</span>
+                    </button>
+                </div>
+                
+                <div class="border-t border-white/10 pt-6">
+                    <p class="text-sm text-gray-400 mb-4 text-center">Or drop files here</p>
+                    <div class="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-neonTeal transition-colors cursor-pointer" id="drop-zone">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 text-gray-600 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">Supported: .wav, .mp3, .aiff (max 100MB)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Player Bar (Fixed Bottom) -->
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 transform translate-y-full transition-transform duration-300 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+            <div class="flex items-center gap-3 flex-1">
+                <img id="player-cover" src="" class="w-12 h-12 rounded-lg object-cover bg-gray-800">
+                <div>
+                    <h4 id="player-title" class="text-white font-medium text-sm">Select a track</h4>
+                    <p id="player-artist" class="text-xs text-gray-400">Artist</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button onclick="player.skipBackward()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="skip-back" class="w-5 h-5"></i>
+                </button>
+                <button onclick="player.togglePlay()" id="play-btn" class="w-10 h-10 rounded-full bg-electricSaffron flex items-center justify-center text-black hover:scale-105 transition-transform">
+                    <i data-lucide="play" class="w-5 h-5 fill-black" id="play-icon"></i>
+                </button>
+                <button onclick="player.skipForward()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="skip-forward" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 max-w-md mx-4">
+                <div id="waveform-mini" class="h-10 w-full"></div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <i data-lucide="volume-2" class="w-4 h-4 text-gray-400"></i>
+                <input type="range" min="0" max="100" value="80" class="w-24 accent-electricSaffron" oninput="player.setVolume(this.value)">
+            </div>
+            
+            <button onclick="player.close()" class="text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Modal functions
+        function openAddModal() {
+            const modal = document.getElementById('add-modal');
+            const content = document.getElementById('add-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+        
+        function closeAddModal() {
+            const modal = document.getElementById('add-modal');
+            const content = document.getElementById('add-modal-content');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+        
+        // Audio Player Class
+        class AudioPlayer {
+            constructor() {
+                this.currentSound = null;
+                this.isPlaying = false;
+                this.wavesurfer = null;
+                this.queue = [];
+                this.currentIndex = 0;
+            }
+            
+            async loadTrack(track) {
+                // Show player bar
+                document.getElementById('player-bar').classList.remove('translate-y-full');
+                
+                // Update UI
+                document.getElementById('player-title').textContent = track.title;
+                document.getElementById('player-artist').textContent = track.artist;
+                document.getElementById('player-cover').src = track.cover || 'https://via.placeholder.com/100';
+                
+                // Stop previous
+                if (this.currentSound) {
+                    this.currentSound.stop();
+                    this.currentSound.unload();
+                }
+                
+                // Load new sound with Howler
+                this.currentSound = new Howl({
+                    src: [track.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'],
+                    html5: true,
+                    volume: 0.8,
+                    onplay: () => {
+                        this.isPlaying = true;
+                        this.updatePlayButton();
+                    },
+                    onpause: () => {
+                        this.isPlaying = false;
+                        this.updatePlayButton();
+                    },
+                    onend: () => {
+                        this.isPlaying = false;
+                        this.updatePlayButton();
+                        this.skipForward();
+                    }
+                });
+                
+                this.currentSound.play();
+                this.initWaveform(track.audioUrl);
+            }
+            
+            initWaveform(url) {
+                if (this.wavesurfer) {
+                    this.wavesurfer.destroy();
+                }
+                
+                this.wavesurfer = WaveSurfer.create({
+                    container: '#waveform-mini',
+                    waveColor: 'rgba(255, 153, 51, 0.3)',
+                    progressColor: '#FF9933',
+                    cursorColor: '#00F2FF',
+                    barWidth: 2,
+                    barGap: 1,
+                    height: 40,
+                    url: url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+                });
+            }
+            
+            togglePlay() {
+                if (!this.currentSound) return;
+                
+                if (this.isPlaying) {
+                    this.currentSound.pause();
+                    if (this.wavesurfer) this.wavesurfer.pause();
+                } else {
+                    this.currentSound.play();
+                    if (this.wavesurfer) this.wavesurfer.play();
+                }
+            }
+            
+            updatePlayButton() {
+                const icon = document.getElementById('play-icon');
+                if (this.isPlaying) {
+                    icon.setAttribute('data-lucide', 'pause');
+                } else {
+                    icon.setAttribute('data-lucide', 'play');
+                }
+                lucide.createIcons();
+            }
+            
+            skipForward() {
+                // Play next in queue
+                this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+                if (this.queue[this.currentIndex]) {
+                    this.loadTrack(this.queue[this.currentIndex]);
+                }
+            }
+            
+            skipBackward() {
+                this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.queue.length - 1;
+                if (this.queue[this.currentIndex]) {
+                    this.loadTrack(this.queue[this.currentIndex]);
+                }
+            }
+            
+            setVolume(val) {
+                if (this.currentSound) {
+                    this.currentSound.volume(val / 100);
+                }
+            }
+            
+            close() {
+                document.getElementById('player-bar').classList.add('translate-y-full');
+                if (this.currentSound) {
+                    this.currentSound.stop();
+                }
+                if (this.wavesurfer) {
+                    this.wavesurfer.destroy();
+                }
+            }
+        }
+        
+        const player = new AudioPlayer();
+        
+        // Load trending stems
+        async function loadTrendingStems() {
+            // Simulating API call
+            const stems = [
+                {
+                    id: 1,
+                    title: "Midnight Dhaba Vibes",
+                    artist: "@trapproducer_mumbai",
+                    cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=640&h=360&fit=crop",
+                    bpm: 140,
+                    key: "C-Minor",
+                    genre: "Sufi-Trap",
+                    likes: 2400,
+                    layers: 12
+                },
+                {
+                    id: 2,
+                    title: "Bollywood Phonk",
+                    artist: "@desibeats_delhi",
+                    cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=640&h=360&fit=crop",
+                    bpm: 95,
+                    key: "F-Major",
+                    genre: "Phonk",
+                    likes: 1800,
+                    layers: 8
+                },
+                {
+                    id: 3,
+                    title: "Raga Digital Fusion",
+                    artist: "@classicaltech_chennai",
+                    cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=640&h=360&fit=crop",
+                    bpm: 128,
+                    key: "G-Minor",
+                    genre: "Fusion",
+                    likes: 3200,
+                    layers: 24
+                }
+            ];
+            
+            const container = document.getElementById('trending-stems');
+            container.innerHTML = stems.map(stem => `
+                <div class="glass-card rounded-2xl overflow-hidden group cursor-pointer" onclick="playStem(${stem.id})">
+                    <div class="relative h-48">
+                        <img src="${stem.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" alt="${stem.title}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-deepSpace via-transparent to-transparent"></div>
+                        <div class="absolute top-4 left-4 flex gap-2">
+                            <span class="px-2 py-1 rounded bg-neonTeal/20 text-neonTeal text-xs font-bold border border-neonTeal/30">${stem.bpm} BPM</span>
+                            <span class="px-2 py-1 rounded bg-white/10 text-white text-xs border border-white/20">${stem.key}</span>
+                        </div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <h3 class="font-archivo text-lg text-white">${stem.title}</h3>
+                            <p class="text-sm text-gray-400">by ${stem.artist}</p>
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm">
+                            <button class="w-16 h-16 rounded-full bg-electricSaffron/90 flex items-center justify-center saffron-glow transform scale-90 group-hover:scale-100 transition-transform">
+                                <i data-lucide="play" class="w-8 h-8 text-black fill-black ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1 text-gray-400 text-sm">
+                                <i data-lucide="heart" class="w-4 h-4"></i>
+                                ${(stem.likes / 1000).toFixed(1)}k
+                            </span>
+                            <span class="flex items-center gap-1 text-gray-400 text-sm">
+                                <i data-lucide="git-branch" class="w-4 h-4"></i>
+                                ${stem.layers}
+                            </span>
+                        </div>
+                        <span class="text-xs text-electricSaffron border border-electricSaffron/30 px-2 py-1 rounded-full">${stem.genre}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+        
+        function playStem(id) {
+            // Find stem and play
+            player.loadTrack({
+                title: 'Stem ' + id,
+                artist: 'Artist Name',
+                audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-' + (id % 3 + 1) + '.mp3'
+            });
+        }
+        
+        function showTokenHistory() {
+            alert('Jam Tokens: Earned by collaborating, winning bounties, and helping others. Current balance: 2,450');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTrendingStems();
+            
+            // Drag and drop handling
+            const dropZone = document.getElementById('drop-zone');
+            if (dropZone) {
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-neonTeal', 'bg-neonTeal/10');
+                });
+                
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('border-neonTeal', 'bg-neonTeal/10');
+                });
+                
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-neonTeal', 'bg-neonTeal/10');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        handleFileUpload(files[0]);
+                    }
+                });
+            }
+        });
+        
+        function handleFileUpload(file) {
+            // Simulate upload
+            console.log('Uploading:', file.name);
+            alert(`Uploading ${file.name}... Redirecting to upload page`);
+            window.location.href = 'upload.html?file=' + encodeURIComponent(file.name);
+        }
+    </script>
+</body>
+</html>
